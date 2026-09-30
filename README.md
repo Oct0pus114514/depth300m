@@ -61,8 +61,17 @@ GS / multi-view / mesh export, not mono depth). No separate DA3 clone is needed;
 |---|---|---|
 | DA3-BASE (student init / architecture container) | Depth-Anything-3 repo release links | `ckpt/model.safetensors` |
 | DA3MONO-LARGE (teacher T2) | Depth-Anything-3 repo release links | `ckpt/DA3MONO-LARGE.safetensors` |
-| **Ours (final EMA)** | this repo (git-lfs) | already at `ckpt/depth300m_ema_iter25000.fp16.safetensors` |
+| **Ours (final EMA)** | **Hugging Face: `Oct0pus/depth300m`** (private repo) | `ckpt/depth300m_ema_iter25000.fp16.safetensors` |
 | Marigold V2 Log-stage2 (teacher T1) | `huawei-bayerlab/marigold-v2` (HF) | only if you re-label data |
+
+```bash
+# download ours (private repo - pass your HF token; or `hf auth login` first)
+huggingface-cli download Oct0pus/depth300m depth300m_ema_iter25000.fp16.safetensors \
+    --local-dir ckpt --token $HF_TOKEN
+```
+
+Weights are NOT stored in this git repo on purpose (git-lfs pulls are unreliable
+behind some networks; a ZIP download would give you pointer files, not weights).
 
 Our fine-tuned weights are loaded on top of the DA3-BASE checkpoint
 (`load_state_dict(..., strict=False)`); see `code/eval_*.py` for the exact recipe.
@@ -122,7 +131,7 @@ float32 outside autocast.
 ```
 code/        training / inference / eval / demo scripts (single-file each)
 da3_src/     vendored Depth-Anything-3 sources (Apache-2.0, pruned + lazy-patch, see above)
-ckpt/        depth300m_ema_iter25000.fp16.safetensors  (final EMA weights, git-lfs)
+ckpt/        weights land here by download (ours from HF, DA3-BASE from its repo); git-ignored
 data/hw/     the 55 HW RGB images (phone EDOF portraits/scenes) used by the quickstart
 demo/        hw_final/ — 55 comparison sheets (RGB | Marigold V2 | DA3-BASE | Ours)
 results/     final eval logs, baseline jsons, training log.jsonl
