@@ -21,8 +21,7 @@ def load_model(args):
             return S._load("da3-base", "model.safetensors").cuda().eval()
         return S._load("da3mono-large", "DA3MONO-LARGE.safetensors").cuda().eval()
     m = S.load_student()
-    ck = torch.load(args.ckpt, map_location="cuda")
-    sd = ck["ema"] if args.ema else ck["model"]
+    sd = S.load_sd(args.ckpt, args.ema)
     miss, unexp = m.load_state_dict(sd, strict=False)
     print(f"[infer] loaded {args.ckpt} ({'ema' if args.ema else 'model'}), miss={len(miss)} unexp={len(unexp)}")
     return m.eval()

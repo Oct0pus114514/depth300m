@@ -18,8 +18,7 @@ def load_model(args):
         name = "da3-base" if args.baseline == "da3base" else "da3mono-large"
         return S._load(name, ck).cuda().eval()
     m = S.load_student()
-    ck = torch.load(args.ckpt, map_location="cuda")
-    sd = ck["ema"] if args.ema else ck["model"]
+    sd = S.load_sd(args.ckpt, args.ema)
     m.load_state_dict(sd, strict=False)
     return m.eval()
 

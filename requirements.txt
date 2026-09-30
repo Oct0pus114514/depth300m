@@ -1,8 +1,21 @@
+# core
 torch>=2.1
 torchvision>=0.16
-numpy
+numpy<2
 pillow
 scipy
-matplotlib
 tqdm
 safetensors
+matplotlib
+
+# vendored DA3 sources (da3_src/) — module-level requirements
+einops
+addict
+omegaconf
+huggingface_hub
+imageio
+opencv-python
+plyfile
+
+# NOTE: evo / pycolmap / trimesh / moviepy / gsplat are NOT required — the vendored
+# copy patches them lazy; they are only needed for GS / multi-view / mesh export.

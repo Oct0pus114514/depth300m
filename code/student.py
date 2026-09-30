@@ -1,11 +1,33 @@
 """Student (DA3-BASE) and teacher (DA3MONO-LARGE) wrappers for mono training."""
 from __future__ import annotations
-import sys, torch
-sys.path.insert(0, "/root/autodl-tmp/Depth-Anything-3/src")
+import os, sys, torch
+from pathlib import Path
+
+_REPO = Path(__file__).resolve().parent.parent
+# vendored DA3 sources ship with this repo (da3_src/, Apache-2.0, lightly patched
+# to make pycolmap/evo/trimesh/moviepy optional); DA3_SRC env or the original
+# training-server layout work as fallbacks.
+for _p in (_REPO / "da3_src",
+           Path(os.environ.get("DA3_SRC", "/nonexistent")),
+           Path("/root/autodl-tmp/Depth-Anything-3/src")):
+    if (_p / "depth_anything_3" / "api.py").exists():
+        sys.path.insert(0, str(_p))
+        break
 from depth_anything_3.api import DepthAnything3
 from safetensors.torch import load_file
 
-DA3_CKPT = "/root/autodl-tmp/Depth-Anything-3/ckpt"
+
+def _resolve_ckpt_dir():
+    env = os.environ.get("DA3_CKPT_DIR")
+    if env:
+        return env
+    # fresh checkout: put downloaded DA3-BASE/DA3MONO safetensors into <repo>/ckpt/
+    if (_REPO / "ckpt" / "model.safetensors").exists():
+        return str(_REPO / "ckpt")
+    return "/root/autodl-tmp/Depth-Anything-3/ckpt"  # training-server layout
+
+
+DA3_CKPT = _resolve_ckpt_dir()
 
 
 def _load(model_name, ckpt_file):
@@ -16,6 +38,15 @@ def _load(model_name, ckpt_file):
     real_miss = [k for k in miss if "output_conv2_aux" not in k]
     assert not real_miss and not unexp, (real_miss[:3], unexp[:3])
     return m
+
+
+def load_sd(path, ema=True):
+    """Accepts a training .pt ({model, ema, proj, iter}) or a raw safetensors state_dict."""
+    if str(path).endswith(".safetensors"):
+        from safetensors.torch import load_file
+        return load_file(str(path))
+    ck = torch.load(path, map_location="cpu")
+    return ck["ema"] if ema else ck["model"]
 
 
 def load_student():

@@ -47,24 +47,39 @@ staying within +0.003 AbsRel of its init on NYU (guardrail: ≤ +0.005).
 
 Full logs: `results/`.
 
+## Architecture code & weights
+
+**Model architecture code is vendored**: `da3_src/` contains the Depth Anything 3
+sources (Apache-2.0, upstream commit `3d835ec`, `bench/app/services/cli` removed, and a
+small patch marks `evo/pycolmap/trimesh/moviepy/gsplat` lazy — they are only needed for
+GS / multi-view / mesh export, not mono depth). No separate DA3 clone is needed;
+`DA3_SRC` env var overrides the location if you want to use your own copy.
+
+**Weights** (not included except ours):
+
+| Weight | Get from | Put at |
+|---|---|---|
+| DA3-BASE (student init / architecture container) | Depth-Anything-3 repo release links | `ckpt/model.safetensors` |
+| DA3MONO-LARGE (teacher T2) | Depth-Anything-3 repo release links | `ckpt/DA3MONO-LARGE.safetensors` |
+| **Ours (final EMA)** | this repo (git-lfs) | already at `ckpt/depth300m_ema_iter25000.fp16.safetensors` |
+| Marigold V2 Log-stage2 (teacher T1) | `huawei-bayerlab/marigold-v2` (HF) | only if you re-label data |
+
+Our fine-tuned weights are loaded on top of the DA3-BASE checkpoint
+(`load_state_dict(..., strict=False)`); see `code/eval_*.py` for the exact recipe.
+
 ## Quickstart
 
 Paths in the scripts default to our training server layout (`/root/autodl-tmp/...`); adjust the
 constants at the top of each file for your machine.
 
 ```bash
-# 1) environment
+# 1) environment (vendored DA3 code needs no extra install)
 pip install -r requirements.txt
-git clone https://github.com/YvanYin530/Depth-Anything-3   # Apache-2.0, model code
-pip install -e Depth-Anything-3                            # its deps (addict, einops, ...)
-# student.py points to /root/autodl-tmp/Depth-Anything-3/src — edit DA3_CKPT/sys.path there
 
-# 2) weights: DA3-BASE base checkpoint into Depth-Anything-3/ckpt/model.safetensors
-#    (from the DA3 repo release), then load our fine-tuned EMA weights on top:
-#    ckpt/depth300m_ema_iter25000.fp16.safetensors  (fp16, 443 tensors, ~258 MiB)
+# 2) download DA3-BASE into ckpt/model.safetensors (table above)
 
-# 3) inference on a folder of images (native aspect, process_res 1024)
-python code/infer_model.py
+# 3) inference on the bundled HW set (55 phone EDOF images, native aspect, res 1024)
+python code/infer_model.py --ckpt ckpt/depth300m_ema_iter25000.fp16.safetensors --images data/hw --out infer_out
 
 # 4) evaluations
 python code/eval_nyu.py --ckpt ckpt/depth300m_ema_iter25000.fp16.safetensors --ema
@@ -72,6 +87,18 @@ python code/eval_hw.py --ckpt ... --ema
 
 # 5) regenerate the 4-panel comparison demos (RGB | Marigold V2 | DA3-BASE | Ours)
 python code/demo_hw_final.py
+```
+
+### Regenerating T1 pseudo-labels (optional)
+
+T1 labels come from offline Marigold V2 inference; the marigold-v2 repo is NOT vendored
+(no code here imports it). To re-label your own data:
+
+```bash
+git clone https://github.com/huawei-bayerlab/marigold-v2
+python marigold-v2/scripts/infer.py --modality depth \
+    --checkpoint <path>/Marigold-V2/depth/Log-stage2 \
+    --image_dir <your_images> --output_dir <labels_out>   # native resolution
 ```
 
 ## Training reproduction
@@ -94,7 +121,9 @@ float32 outside autocast.
 
 ```
 code/        training / inference / eval / demo scripts (single-file each)
+da3_src/     vendored Depth-Anything-3 sources (Apache-2.0, pruned + lazy-patch, see above)
 ckpt/        depth300m_ema_iter25000.fp16.safetensors  (final EMA weights, git-lfs)
+data/hw/     the 55 HW RGB images (phone EDOF portraits/scenes) used by the quickstart
 demo/        hw_final/ — 55 comparison sheets (RGB | Marigold V2 | DA3-BASE | Ours)
 results/     final eval logs, baseline jsons, training log.jsonl
 ```
