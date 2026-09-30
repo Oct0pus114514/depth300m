@@ -66,8 +66,14 @@ GS / multi-view / mesh export, not mono depth). No separate DA3 clone is needed;
 
 ```bash
 # download ours (private repo - pass your HF token; or `hf auth login` first)
-huggingface-cli download Oct0pus/depth300m depth300m_ema_iter25000.fp16.safetensors \
+# huggingface_hub >= 0.34 / 2.x renamed the CLI: use `hf` (older versions: `huggingface-cli`)
+hf download Oct0pus/depth300m depth300m_ema_iter25000.fp16.safetensors \
     --local-dir ckpt --token $HF_TOKEN
+
+# or from Python:
+# from huggingface_hub import hf_hub_download
+# hf_hub_download("Oct0pus/depth300m", "depth300m_ema_iter25000.fp16.safetensors",
+#                 local_dir="ckpt", token=...)
 ```
 
 Weights are NOT stored in this git repo on purpose (git-lfs pulls are unreliable
